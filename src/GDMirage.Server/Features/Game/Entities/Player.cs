@@ -58,7 +58,17 @@ public sealed class Player(int entityId, GameConnection connection, Character ch
     public int Intelligence => character.Intelligence;
 
     public GameConnection Connection { get; } = connection;
-    public GameMap CurrentMap { get; set; } = currentMap;
+
+    public GameMap CurrentMap
+    {
+        get;
+        set
+        {
+            field = value;
+
+            character.Map = value.MapPath;
+        }
+    } = currentMap;
 
     public async ValueTask GrantExperience(int amount)
     {
