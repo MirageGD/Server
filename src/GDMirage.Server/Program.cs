@@ -16,22 +16,14 @@ builder.Services.AddOptions<ServerOptions>()
 
 builder.Services.AddAccountServices(builder.Configuration);
 builder.Services.AddGameServices();
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowLocalhost",
-        policy => policy
-            .WithOrigins("http://localhost:8000")
-            .AllowAnyHeader()
-            .AllowAnyMethod());
-});
+builder.Services.AddCors();
 
 var app = builder.Build();
 
-app.UseCors(policy =>
-    policy.AllowAnyOrigin()
-        .AllowAnyHeader()
-        .AllowAnyMethod());
+app.UseCors(policy => policy
+    .AllowAnyOrigin()
+    .AllowAnyHeader()
+    .AllowAnyMethod());
 
 app.UseWebSockets();
 
