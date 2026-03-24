@@ -60,9 +60,9 @@ public static partial class Endpoints
     [LoggerMessage(LogLevel.Information, "File not found: {path}")]
     static partial void LogFileNotFound(this ILogger<Program> logger, string path);
 
-    [LoggerMessage(LogLevel.Information, "File not modified: {path}")]
+    [LoggerMessage(LogLevel.Debug, "File not modified: {path}")]
     static partial void LogFileNotModified(this ILogger<Program> logger, string path);
 
-    [LoggerMessage(LogLevel.Information, "Serving {path}")]
+    [LoggerMessage(LogLevel.Debug, "Serving {path}")]
     static partial void LogServing(this ILogger<Program> logger, string path);
 }
