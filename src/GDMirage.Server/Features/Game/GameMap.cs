@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Channels;
 using GDMirage.Server.Features.Game.Combat;
 using GDMirage.Server.Features.Game.Entities;
 using GDMirage.Server.Features.Game.Maps;
+using GDMirage.Server.Features.Game.Maps.Objects;
 using GDMirage.Server.Features.Game.Messages;
 using GDMirage.Server.Features.Game.Stats;
 using GDMirage.Server.Features.Shared;
@@ -17,21 +19,23 @@ public sealed partial class GameMap
     private readonly ConcurrentQueue<(Npc Npc, DateTime RespawnAt)> _pendingRespawns = new();
     private readonly ILogger _logger;
     private readonly IGameService _gameService;
-    private readonly string _mapPath;
     private readonly Map _map;
     private readonly Func<int> _entityIdGenerator;
     private readonly IReadOnlyList<NpcInfo> _npcInfoList;
     private readonly Random _random = new();
     private DateTime _lastRegenTime = DateTime.UtcNow;
 
+    public string MapPath { get; }
+
     public GameMap(ILogger logger, IGameService gameService, string mapPath, string fullPath, Func<int> entityIdGenerator, IReadOnlyList<NpcInfo> npcInfoList)
     {
         _logger = logger;
         _gameService = gameService;
-        _mapPath = mapPath;
         _map = new Map(fullPath);
         _entityIdGenerator = entityIdGenerator;
         _npcInfoList = npcInfoList;
+
+        MapPath = mapPath;
 
         LogMapLoaded(mapPath);
 
@@ -58,7 +62,7 @@ public sealed partial class GameMap
 
             _entities.TryAdd(npc.EntityId, npc);
 
-            LogEntityAdded(npc.Name, npc.EntityId, _mapPath);
+            LogEntityAdded(npc.Name, npc.EntityId, MapPath);
         }
     }
 
@@ -90,7 +94,17 @@ public sealed partial class GameMap
 
         return (0, 0);
     }
-    
+
+    public bool TryGetWarpAt(int x, int y, [NotNullWhen(true)] out Warp? warp) => _map.TryGetWarpAt(x, y, out warp);
+
+    public async ValueTask WarpAsync(int entityId)
+    {
+        if (_entities.TryGetValue(entityId, out var entity) && entity is Player player)
+        {
+            await _gameService.WarpPlayerAsync(player);
+        }
+    }
+
     public ValueTask AddEntityAsync(IEntity entity)
     {
         if (!_entities.TryAdd(entity.EntityId, entity))
@@ -98,7 +112,7 @@ public sealed partial class GameMap
             return ValueTask.CompletedTask;
         }
 
-        LogEntityAdded(entity.Name, entity.EntityId, _mapPath);
+        LogEntityAdded(entity.Name, entity.EntityId, MapPath);
 
         return BroadcastEntityJoined(entity);
     }
@@ -110,7 +124,7 @@ public sealed partial class GameMap
             return ValueTask.CompletedTask;
         }
 
-        LogEntityRemoved(entity.Name, entityId, _mapPath);
+        LogEntityRemoved(entity.Name, entityId, MapPath);
 
         return BroadcastEntityLeft(entity);
     }
@@ -338,6 +352,17 @@ public sealed partial class GameMap
         return SendToAllAsync("entity_left", new EntityLeft
         {
             EntityId = entity.EntityId
+        });
+    }
+
+    public ValueTask BroadcastEntityPosition(IEntity entity)
+    {
+        return SendToAllAsync("entity_position", new EntityPosition
+        {
+            EntityId = entity.EntityId,
+            Direction = entity.Direction,
+            X = entity.X,
+            Y = entity.Y
         });
     }
 
@@ -610,8 +635,12 @@ public sealed partial class GameMap
     {
         return mover switch
         {
-            Npc => _entities.Values.Any(e => e.EntityId != mover.EntityId && e.X == x && e.Y == y),
-            Player => _entities.Values.Any(e => e.EntityId != mover.EntityId && e is Npc && e.X == x && e.Y == y),
+            Npc => _entities.Values
+                .Any(e => e.EntityId != mover.EntityId && e.X == x && e.Y == y),
+            
+            Player => _entities.Values
+                .Any(e => e.EntityId != mover.EntityId && e is Npc && e.X == x && e.Y == y),
+            
             _ => false
         };
     }

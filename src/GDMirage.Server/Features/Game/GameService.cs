@@ -3,15 +3,20 @@ using GDMirage.Server.Configuration;
 using GDMirage.Server.Features.Accounts.Entities;
 using GDMirage.Server.Features.Game.Entities;
 using GDMirage.Server.Features.Game.Messages;
+using GDMirage.Server.Features.Shared;
 using Microsoft.Extensions.Options;
 
 namespace GDMirage.Server.Features.Game;
 
-public sealed partial class GameService(ILogger<GameService> logger, IGameMapManager gameMapManager, EntityIdGenerator entityIdGenerator, IOptions<ServerOptions> serverOptions) : IGameService
+public sealed partial class GameService(
+    ILogger<GameService> logger,
+    IGameMapManager gameMapManager,
+    EntityIdGenerator entityIdGenerator,
+    IOptions<ServerOptions> serverOptions) : IGameService
 {
     private readonly ConcurrentDictionary<int, Player> _players = new();
 
-    public async Task<Player> CreatePlayerAsync(GameConnection connection, Account account, Character character)
+    public async Task<Player> CreatePlayerAsync(GameConnection connection, Character character)
     {
         var map = gameMapManager.GetMap(character.Map);
 
@@ -149,6 +154,54 @@ public sealed partial class GameService(ILogger<GameService> logger, IGameMapMan
         LogPlayerRespawned(player.Name, player.EntityId, options.StartMap);
     }
 
+    public async Task WarpPlayerAsync(Player player)
+    {
+        if (!player.CurrentMap.TryGetWarpAt(player.X, player.Y, out var warp))
+        {
+            return;
+        }
+
+        Direction? targetDirection = null;
+        if (warp.TargetDirection is not null && Enum.TryParse<Direction>(warp.TargetDirection, true, out var dir))
+        {
+            targetDirection = dir;
+        }
+
+        if (warp.TargetMap == player.CurrentMap.MapPath)
+        {
+            player.X = warp.TargetX;
+            player.Y = warp.TargetY;
+
+            if (targetDirection.HasValue)
+            {
+                player.Direction = targetDirection.Value;
+            }
+
+            await player.CurrentMap.BroadcastEntityPosition(player);
+        }
+        else
+        {
+            var targetMap = gameMapManager.GetMap(warp.TargetMap);
+
+            await player.CurrentMap.RemoveEntityAsync(player.EntityId);
+
+            player.X = warp.TargetX;
+            player.Y = warp.TargetY;
+
+            if (targetDirection.HasValue)
+            {
+                player.Direction = targetDirection.Value;
+            }
+
+            player.CurrentMap = targetMap;
+
+            await SendMapInit(player.Connection, warp.TargetMap, player.EntityId, targetMap);
+            await targetMap.AddEntityAsync(player);
+
+            LogPlayerWarped(player.Name, player.EntityId, warp.TargetMap);
+        }
+    }
+
     [LoggerMessage(LogLevel.Information, "Player '{CharacterName}' (ID: {EntityId}) has joined the game on map '{MapPath}'")]
     partial void LogPlayerJoined(string characterName, int entityId, string mapPath);
 
@@ -157,4 +210,7 @@ public sealed partial class GameService(ILogger<GameService> logger, IGameMapMan
 
     [LoggerMessage(LogLevel.Information, "Player '{CharacterName}' (ID: {EntityId}) has respawned on map '{MapPath}'")]
     partial void LogPlayerRespawned(string characterName, int entityId, string mapPath);
+
+    [LoggerMessage(LogLevel.Information, "Player '{CharacterName}' (ID: {EntityId}) has warped to map '{MapPath}'")]
+    partial void LogPlayerWarped(string characterName, int entityId, string mapPath);
 }

@@ -1,12 +1,18 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using GDMirage.Server.Features.Game.Maps.Objects;
 
 namespace GDMirage.Server.Features.Game.Maps;
 
 public sealed class Map
 {
-    private readonly int _width;
-    private readonly int _height;
+    private readonly int _tileWidth;
+    private readonly int _tileHeight;
     private readonly TileType[,] _tiles;
+    private readonly List<MapObject> _objects = [];
+
+    public int Width { get; }
+    public int Height { get; }
 
     public Map(string path)
     {
@@ -16,20 +22,23 @@ public sealed class Map
 
         var root = document.RootElement;
 
-        _width = root.GetProperty("width").GetInt32();
-        _height = root.GetProperty("height").GetInt32();
+        Width = root.GetProperty("width").GetInt32();
+        Height = root.GetProperty("height").GetInt32();
+        _tileWidth = root.GetProperty("tilewidth").GetInt32();
+        _tileHeight = root.GetProperty("tileheight").GetInt32();
 
-        if (_width <= 0 || _height <= 0)
+        if (Width <= 0 || Height <= 0)
         {
             throw new ArgumentException("Invalid map dimensions");
         }
 
-        _tiles = new TileType[_width, _height];
+        _tiles = new TileType[Width, Height];
 
         var firstGids = GetTilesetFirstGids(root.GetProperty("tilesets"));
-        var layers = root.GetProperty("layers");
+        var layers = root.GetProperty("layers").EnumerateArray().ToArray();
 
         ParseMetaLayers(layers, firstGids);
+        ParseObjectGroups(layers);
     }
 
     private static List<int> GetTilesetFirstGids(JsonElement tilesets)
@@ -41,9 +50,121 @@ public sealed class Map
             .ToList();
     }
 
-    private void ParseMetaLayers(JsonElement layers, List<int> firstGids)
+    private void ParseObjectGroups(JsonElement[] layers)
     {
-        foreach (var layer in layers.EnumerateArray())
+        var objectGroups = layers
+            .Where(layer => layer
+                .GetProperty("type")
+                .GetString() == "objectgroup");
+
+        foreach (var objectGroup in objectGroups)
+        {
+            ParseObjectGroup(objectGroup);
+        }
+    }
+
+    private void ParseObjectGroup(JsonElement objectGroup)
+    {
+        var objects = objectGroup.GetProperty("objects").EnumerateArray();
+
+        foreach (var obj in objects)
+        {
+            ParseObject(obj);
+        }
+    }
+
+
+    private void ParseObject(JsonElement obj)
+    {
+        var type = obj.GetProperty("type").GetString();
+        var properties = obj.GetProperty("properties")
+            .EnumerateArray()
+            .ToArray();
+
+        var x = obj.GetProperty("x").GetInt32() / _tileWidth;
+        var y = obj.GetProperty("y").GetInt32() / _tileHeight;
+        var width = obj.GetProperty("width").GetInt32() / _tileWidth;
+        var height = obj.GetProperty("height").GetInt32() / _tileWidth;
+
+        switch (type)
+        {
+            case "warp":
+                ParseWarp(x, y, width, height, properties);
+                break;
+        }
+    }
+
+    private void ParseWarp(int x, int y, int width, int height, JsonElement[] properties)
+    {
+        var targetDirection = GetProperty(properties, "target_direction")?.GetProperty("value");
+        
+        _objects.Add(new Warp
+        {
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            TargetMap = GetPropertyString(properties, "target_map"),
+            TargetX = GetPropertyInt(properties, "target_x", 0),
+            TargetY = GetPropertyInt(properties, "target_y", 0),
+            TargetDirection = targetDirection?.GetString()
+        });
+    }
+
+    private static string GetPropertyString(JsonElement[] properties, string name, string defaultValue = "")
+    {
+        var property = GetProperty(properties, name);
+        if (property is null)
+        {
+            return defaultValue;
+        }
+
+        var type = property.Value.GetProperty("type").GetString();
+        if (type is null || !type.Equals("string", StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultValue;
+        }
+
+        return property.Value.GetProperty("value").GetString() ?? defaultValue;
+    }
+
+    private static int GetPropertyInt(JsonElement[] properties, string name, int defaultValue)
+    {
+        var property = GetProperty(properties, name);
+        if (property is null)
+        {
+            return defaultValue;
+        }
+
+        var type = property.Value.GetProperty("type").GetString();
+        if (type is null || !type.Equals("int", StringComparison.OrdinalIgnoreCase))
+        {
+            return defaultValue;
+        }
+
+        return property.Value.GetProperty("value").TryGetInt32(out var value)
+            ? value
+            : defaultValue;
+    }
+
+
+    private static JsonElement? GetProperty(JsonElement[] properties, string name)
+    {
+        foreach (var property in properties)
+        {
+            var propertyName = property.GetProperty("name").GetString();
+            if (propertyName is not null && propertyName.Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
+                return property;
+            }
+        }
+
+        return null;
+    }
+
+    private void ParseMetaLayers(JsonElement[] layers, List<int> firstGids)
+    {
+        foreach (var layer in layers)
         {
             if (layer.GetProperty("type").GetString() != "tilelayer")
             {
@@ -106,7 +227,7 @@ public sealed class Map
 
     public bool IsPassable(int x, int y)
     {
-        if (x < 0 || y < 0 || x >= _width || y >= _height)
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
         {
             return false;
         }
@@ -116,7 +237,7 @@ public sealed class Map
 
     public bool IsNpcPassable(int x, int y)
     {
-        if (x < 0 || y < 0 || x >= _width || y >= _height)
+        if (x < 0 || y < 0 || x >= Width || y >= Height)
         {
             return false;
         }
@@ -124,6 +245,12 @@ public sealed class Map
         return _tiles[x, y] == TileType.None;
     }
 
-    public int Width => _width;
-    public int Height => _height;
+    public bool TryGetWarpAt(int x, int y, [NotNullWhen(true)] out Warp? result)
+    {
+        var warp = _objects.OfType<Warp>().FirstOrDefault(w => w.HasPoint(x, y));
+
+        result = warp;
+
+        return warp != null;
+    }
 }

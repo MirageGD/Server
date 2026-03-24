@@ -48,7 +48,7 @@ public static partial class Endpoints
         var logger = loggerFactory.CreateLogger<GameConnection>();
 
         var connection = new GameConnection(logger, webSocket, character);
-        var player = await gameService.CreatePlayerAsync(connection, account, character);
+        var player = await gameService.CreatePlayerAsync(connection, character);
 
         logger.LogConnectionEstablished(accountName, characterName);
 

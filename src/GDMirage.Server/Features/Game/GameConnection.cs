@@ -152,6 +152,14 @@ public sealed partial class GameConnection(ILogger<GameConnection> logger, WebSo
                     }
 
                     break;
+
+                case "warp":
+                    if (Player is not null)
+                    {
+                        await Player.CurrentMap.WarpAsync(Player.EntityId);
+                    }
+
+                    break;
             }
         }
         catch (JsonException ex)
