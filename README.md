@@ -1,4 +1,8 @@
-# GDMirage - Server
+# GDMirage Server
+
+[![CI](https://github.com/MirageGD/Server/actions/workflows/ci.yaml/badge.svg)](https://github.com/MirageGD/Server/actions/workflows/ci.yaml)
+![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/MirageGD/Server)
+![GitHub License](https://img.shields.io/github/license/MirageGD/Server)
 
 A lightweight 2D ORPG engine built on Godot and C#.
 
