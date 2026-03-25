@@ -112,4 +112,15 @@ public sealed class Player(int entityId, GameConnection connection, Character ch
             ExperienceRequired = ExperienceCalculator.CalculateExperienceForLevel(Level)
         });
     }
+
+    public ValueTask SendPositionAsync()
+    {
+        return Connection.SendAsync("entity_position", new EntityPosition
+        {
+            EntityId = EntityId,
+            Direction = Direction,
+            X = X,
+            Y = Y
+        });
+    }
 }

@@ -129,11 +129,11 @@ public sealed partial class GameMap
         return BroadcastEntityLeft(entity);
     }
 
-    public ValueTask MoveEntityAsync(int entityId, Direction direction)
+    public async ValueTask MoveEntityAsync(int entityId, Direction direction)
     {
         if (!_entities.TryGetValue(entityId, out var entity))
         {
-            return ValueTask.CompletedTask;
+            return;
         }
 
         var sourceX = entity.X;
@@ -150,16 +150,19 @@ public sealed partial class GameMap
 
         if (!_map.IsPassable(newX, newY) || IsTileOccupied(entity, newX, newY))
         {
-            // TODO: Kick the player - they are trying to move out of bounds...
+            if (entity is Player player)
+            {
+                await player.SendPositionAsync();
+            }
 
-            return ValueTask.CompletedTask;
+            return;
         }
 
         entity.Direction = direction;
         entity.X = newX;
         entity.Y = newY;
 
-        return BroadcastEntityMoved(entity, sourceX, sourceY, direction);
+        await BroadcastEntityMoved(entity, sourceX, sourceY, direction);
     }
 
     public ValueTask UpdateDirectionAsync(int entityId, Direction direction)
@@ -637,10 +640,10 @@ public sealed partial class GameMap
         {
             Npc => _entities.Values
                 .Any(e => e.EntityId != mover.EntityId && e.X == x && e.Y == y),
-            
+
             Player => _entities.Values
                 .Any(e => e.EntityId != mover.EntityId && e is Npc && e.X == x && e.Y == y),
-            
+
             _ => false
         };
     }
