@@ -42,13 +42,19 @@ public static partial class Endpoints
             return;
         }
 
+        if (gameService.IsPlayerConnected(accountName, characterName))
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            return;
+        }
+
         using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
 
         var loggerFactory = context.RequestServices.GetRequiredService<ILoggerFactory>();
         var logger = loggerFactory.CreateLogger<GameConnection>();
 
         var connection = new GameConnection(logger, webSocket, character);
-        var player = await gameService.CreatePlayerAsync(connection, character);
+        var player = await gameService.CreatePlayerAsync(connection, account, character);
 
         logger.LogConnectionEstablished(accountName, characterName);
 

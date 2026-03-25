@@ -5,9 +5,10 @@ using GDMirage.Server.Features.Shared;
 
 namespace GDMirage.Server.Features.Game.Entities;
 
-public sealed class Player(int entityId, GameConnection connection, Character character, GameMap currentMap) : IEntity
+public sealed class Player(int entityId, GameConnection connection, string accountName, Character character, GameMap currentMap) : IEntity
 {
     public int EntityId => entityId;
+    public string AccountName => accountName;
     public string Name => character.Name;
 
     public string Sprite

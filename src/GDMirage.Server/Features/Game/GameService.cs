@@ -16,12 +16,12 @@ public sealed partial class GameService(
 {
     private readonly ConcurrentDictionary<int, Player> _players = new();
 
-    public async Task<Player> CreatePlayerAsync(GameConnection connection, Character character)
+    public async Task<Player> CreatePlayerAsync(GameConnection connection, Account account, Character character)
     {
         var map = gameMapManager.GetMap(character.Map);
 
         var playerId = entityIdGenerator.GetNext();
-        var player = new Player(playerId, connection, character, map);
+        var player = new Player(playerId, connection, account.Name, character, map);
 
         if (!_players.TryAdd(playerId, player))
         {
@@ -200,6 +200,15 @@ public sealed partial class GameService(
 
             LogPlayerWarped(player.Name, player.EntityId, warp.TargetMap);
         }
+    }
+
+    public bool IsPlayerConnected(string accountName, string characterName)
+    {
+        return _players.Values.Any(player =>
+            player.AccountName.Equals(accountName,
+                StringComparison.OrdinalIgnoreCase) ||
+            player.Name.Equals(characterName,
+                StringComparison.OrdinalIgnoreCase));
     }
 
     [LoggerMessage(LogLevel.Information, "Player '{CharacterName}' (ID: {EntityId}) has joined the game on map '{MapPath}'")]

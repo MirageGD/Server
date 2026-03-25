@@ -5,7 +5,7 @@ namespace GDMirage.Server.Features.Game;
 
 public interface IGameService
 {
-    Task<Player> CreatePlayerAsync(GameConnection connection, Character character);
+    Task<Player> CreatePlayerAsync(GameConnection connection, Account account, Character character);
     Task RemovePlayerAsync(int entityId);
     Player? GetPlayer(int entityId);
     IEnumerable<Player> GetAllPlayers();
@@ -13,4 +13,5 @@ public interface IGameService
     ValueTask GrantExperience(int entityId, int amount);
     Task RespawnPlayerAsync(Player player);
     Task WarpPlayerAsync(Player player);
+    bool IsPlayerConnected(string accountName, string characterName);
 }
