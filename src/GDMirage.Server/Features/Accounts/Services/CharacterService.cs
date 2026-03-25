@@ -49,7 +49,7 @@ public sealed partial class CharacterService : ICharacterService
 
         const int defaultStamina = 10;
         const int defaultIntelligence = 10;
-        
+
         var maxHealth = VitalCalculator.CalculateMaxHealth(defaultStamina, 1);
         var maxMana = VitalCalculator.CalculateMaxMana(defaultIntelligence, 1);
 
@@ -57,9 +57,7 @@ public sealed partial class CharacterService : ICharacterService
         {
             Name = characterName,
             Health = maxHealth,
-            MaxHealth = maxHealth,
             Mana = maxMana,
-            MaxMana = maxMana,
             Strength = 10,
             Stamina = defaultStamina,
             Intelligence = defaultIntelligence,
@@ -88,29 +86,7 @@ public sealed partial class CharacterService : ICharacterService
 
         await using var stream = File.OpenRead(path);
 
-        var character = await JsonSerializer.DeserializeAsync<Character>(stream, JsonSerializerOptions);
-        if (character is null)
-        {
-            return character;
-        }
-
-        if (character.MaxHealth == 0)
-        {
-            var maxHealth = VitalCalculator.CalculateMaxHealth(character.Stamina, character.Level);
-            
-            character.MaxHealth = maxHealth;
-            character.Health = maxHealth;
-        }
-
-        if (character.MaxMana == 0)
-        {
-            var maxMana = VitalCalculator.CalculateMaxMana(character.Intelligence, character.Level);
-            
-            character.MaxMana = maxMana;
-            character.Mana = maxMana;
-        }
-
-        return character;
+        return await JsonSerializer.DeserializeAsync<Character>(stream, JsonSerializerOptions);
     }
 
     public Task DeleteAsync(string characterName)

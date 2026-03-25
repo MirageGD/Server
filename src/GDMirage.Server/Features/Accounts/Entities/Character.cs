@@ -8,9 +8,7 @@ public sealed record Character
     public int Level { get; set; } = 1;
     public string Sprite { get; set; } = "sprites/spr_warrior.png";
     public int Health { get; set; } = 100;
-    public int MaxHealth { get; set; } = 100;
     public int Mana { get; set; } = 100;
-    public int MaxMana { get; set; } = 100;
     public int StatPoints { get; set; }
     public int Strength { get; set; } = 10;
     public int Stamina { get; set; } = 10;

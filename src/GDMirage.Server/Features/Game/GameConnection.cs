@@ -160,6 +160,18 @@ public sealed partial class GameConnection(ILogger<GameConnection> logger, WebSo
                     }
 
                     break;
+
+                case "use_stat_point":
+                    if (root.TryGetProperty("stat", out var statProperty))
+                    {
+                        var statStr = statProperty.GetString();
+                        if (Enum.TryParse<Stat>(statStr, true, out var stat) && Player is not null)
+                        {
+                            await Player.UseStatPoint(stat);
+                        }
+                    }
+
+                    break;
             }
         }
         catch (JsonException ex)

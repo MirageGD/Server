@@ -39,13 +39,14 @@ public sealed class Player(int entityId, GameConnection connection, string accou
 
     public int Level => character.Level;
 
+    public int MaxHealth => VitalCalculator.CalculateMaxHealth(character.Stamina, character.Level);
+    public int MaxMana => VitalCalculator.CalculateMaxMana(character.Intelligence, character.Level);
+
     public int Health
     {
         get => character.Health;
         set => character.Health = value;
     }
-
-    public int MaxHealth => character.MaxHealth;
 
     public int Mana
     {
@@ -53,7 +54,6 @@ public sealed class Player(int entityId, GameConnection connection, string accou
         set => character.Mana = value;
     }
 
-    public int MaxMana => character.MaxMana;
     public int Strength => character.Strength;
     public int Stamina => character.Stamina;
     public int Intelligence => character.Intelligence;
@@ -89,19 +89,69 @@ public sealed class Player(int entityId, GameConnection connection, string accou
 
         character.Level++;
         character.Experience = overflow;
-        character.MaxHealth = VitalCalculator.CalculateMaxHealth(character.Stamina, character.Level);
-        character.Health = character.MaxHealth;
-        character.MaxMana = VitalCalculator.CalculateMaxMana(character.Intelligence, character.Level);
-        character.Mana = character.MaxMana;
+        character.Health = MaxHealth;
+        character.Mana = MaxMana;
         character.StatPoints += 5;
 
         await CurrentMap.BroadcastEntityLeveledUp(this);
+        await SendStatsAsync();
 
         await Connection.SendAsync("chat", new ChatMessage
         {
             Channel = "system",
             Message = $"You have reached level {character.Level}!",
             Color = "#ffff00"
+        });
+    }
+
+    public async ValueTask UseStatPoint(Stat stat)
+    {
+        if (character.StatPoints == 0)
+        {
+            return;
+        }
+
+        switch (stat)
+        {
+            case Stat.Strength:
+                character.Strength++;
+                break;
+
+            case Stat.Stamina:
+                character.Stamina++;
+                break;
+
+            case Stat.Intelligence:
+                character.Intelligence++;
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException(nameof(stat), stat, null);
+        }
+
+        character.StatPoints--;
+
+        await SendStatsAsync();
+
+        if (stat == Stat.Stamina)
+        {
+            await CurrentMap.SendToAllAsync("entity_health", new EntityHealth
+            {
+                EntityId = EntityId,
+                Health = Health,
+                MaxHealth = MaxHealth
+            });
+        }
+    }
+
+    public ValueTask SendPositionAsync()
+    {
+        return Connection.SendAsync("entity_position", new EntityPosition
+        {
+            EntityId = EntityId,
+            Direction = Direction,
+            X = X,
+            Y = Y
         });
     }
 
@@ -114,14 +164,14 @@ public sealed class Player(int entityId, GameConnection connection, string accou
         });
     }
 
-    public ValueTask SendPositionAsync()
+    public ValueTask SendStatsAsync()
     {
-        return Connection.SendAsync("entity_position", new EntityPosition
+        return Connection.SendAsync("player_stats", new PlayerStats
         {
-            EntityId = EntityId,
-            Direction = Direction,
-            X = X,
-            Y = Y
+            Strength = character.Strength,
+            Stamina = character.Stamina,
+            Intelligence = character.Intelligence,
+            StatPoints = character.StatPoints
         });
     }
 }

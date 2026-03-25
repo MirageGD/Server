@@ -33,6 +33,7 @@ public sealed partial class GameService(
         await SendMapInit(connection, character.Map, playerId, map);
         await map.AddEntityAsync(player);
         await player.SendXpAsync();
+        await player.SendStatsAsync();
 
         LogPlayerJoined(player.Name, playerId, character.Map);
 

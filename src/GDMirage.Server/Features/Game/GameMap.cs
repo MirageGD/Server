@@ -381,7 +381,7 @@ public sealed partial class GameMap
         });
     }
 
-    private async ValueTask SendToAllAsync<T>(string type, T payload)
+    public async ValueTask SendToAllAsync<T>(string type, T payload)
     {
         foreach (var entity in _entities.Values)
         {
