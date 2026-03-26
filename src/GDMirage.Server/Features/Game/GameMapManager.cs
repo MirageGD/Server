@@ -12,6 +12,7 @@ public sealed partial class GameMapManager(
     IOptions<ServerOptions> options,
     EntityIdGenerator entityIdGenerator,
     NpcInfoManager npcInfoManager,
+    ItemInfoManager itemInfoManager,
     IServiceProvider serviceProvider)
     : BackgroundService, IGameMapManager
 {
@@ -35,12 +36,12 @@ public sealed partial class GameMapManager(
         LogLoading(mapPath);
 
         var gameService = serviceProvider.GetRequiredService<IGameService>();
-        var npcInfoList = LoadNpcInfoList(mapPath);
+        var npcInfos = LoadNpcInfos(mapPath);
 
-        return new GameMap(logger, gameService, mapPath, fullPath, entityIdGenerator.GetNext, npcInfoList);
+        return new GameMap(logger, gameService, mapPath, fullPath, entityIdGenerator.GetNext, npcInfos, itemInfoManager);
     }
 
-    private List<NpcInfo> LoadNpcInfoList(string mapPath)
+    private List<NpcInfo> LoadNpcInfos(string mapPath)
     {
         var infoPath = Path.Combine(_contentPath, Path.ChangeExtension(mapPath, ".json"));
 

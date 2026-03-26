@@ -8,6 +8,7 @@ public static class DependencyInjection
     {
         services.AddSingleton<EntityIdGenerator>();
         services.AddSingleton<NpcInfoManager>();
+        services.AddSingleton<ItemInfoManager>();
         services.AddSingleton<IGameMapManager, GameMapManager>();
         services.AddHostedService(sp => sp.GetRequiredService<IGameMapManager>());
         services.AddSingleton<IGameService, GameService>();

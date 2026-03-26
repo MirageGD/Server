@@ -103,11 +103,21 @@ public sealed partial class GameService(
             Y = entity.Y,
         });
 
+        var itemDtos = map.GetAllItems().Select(item => new ItemDto
+        {
+            InstanceId = item.InstanceId,
+            Texture = item.Info.Texture,
+            SpriteIndex = item.Info.SpriteIndex,
+            X = item.X,
+            Y = item.Y
+        });
+
         await connection.SendAsync("map_init", new InitializeMap
         {
             MapPath = mapPath,
             PlayerEntityId = entityId,
-            Entities = entityDtos.ToList()
+            Entities = entityDtos.ToList(),
+            Items = itemDtos.ToList()
         });
     }
 

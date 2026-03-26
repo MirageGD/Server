@@ -172,6 +172,14 @@ public sealed partial class GameConnection(ILogger<GameConnection> logger, WebSo
                     }
 
                     break;
+
+                case "item_pickup":
+                    if (Player is not null)
+                    {
+                        await Player.CurrentMap.PickupItemAsync(Player.EntityId);
+                    }
+
+                    break;
             }
         }
         catch (JsonException ex)

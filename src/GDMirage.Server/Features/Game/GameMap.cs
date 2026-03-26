@@ -16,24 +16,28 @@ public sealed partial class GameMap
     private const double HealthRegenIntervalInSeconds = 2.0;
 
     private readonly ConcurrentDictionary<int, IEntity> _entities = new();
+    private readonly ConcurrentDictionary<int, MapItem> _items = new();
     private readonly ConcurrentQueue<(Npc Npc, DateTime RespawnAt)> _pendingRespawns = new();
     private readonly ILogger _logger;
     private readonly IGameService _gameService;
     private readonly Map _map;
     private readonly Func<int> _entityIdGenerator;
-    private readonly IReadOnlyList<NpcInfo> _npcInfoList;
+    private readonly IReadOnlyList<NpcInfo> _npcInfos;
+    private readonly ItemInfoManager _itemInfoManager;
     private readonly Random _random = new();
+    private int _nextItemInstanceId;
     private DateTime _lastRegenTime = DateTime.UtcNow;
 
     public string MapPath { get; }
 
-    public GameMap(ILogger logger, IGameService gameService, string mapPath, string fullPath, Func<int> entityIdGenerator, IReadOnlyList<NpcInfo> npcInfoList)
+    public GameMap(ILogger logger, IGameService gameService, string mapPath, string fullPath, Func<int> entityIdGenerator, IReadOnlyList<NpcInfo> npcInfos, ItemInfoManager itemInfoManager)
     {
         _logger = logger;
         _gameService = gameService;
         _map = new Map(fullPath);
         _entityIdGenerator = entityIdGenerator;
-        _npcInfoList = npcInfoList;
+        _npcInfos = npcInfos;
+        _itemInfoManager = itemInfoManager;
 
         MapPath = mapPath;
 
@@ -44,7 +48,7 @@ public sealed partial class GameMap
 
     private void SpawnNpcs()
     {
-        foreach (var npcInfo in _npcInfoList)
+        foreach (var npcInfo in _npcInfos)
         {
             var (x, y) = FindRandomPassableTile();
 
@@ -258,6 +262,25 @@ public sealed partial class GameMap
                     Color = "#ffff00"
                 });
 
+                foreach (var (itemId, dropRate) in killedNpc.Loot)
+                {
+                    if (_random.NextDouble() >= dropRate)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        var itemInfo = _itemInfoManager.GetItemInfo(itemId);
+
+                        await DropItemAsync(itemInfo, killedNpc.X, killedNpc.Y);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to drop loot item '{ItemId}' from '{NpcName}'", itemId, killedNpc.Name);
+                    }
+                }
+
                 _pendingRespawns.Enqueue((killedNpc, DateTime.UtcNow.AddSeconds(killedNpc.RespawnDelaySec)));
 
                 await RemoveEntityAsync(killedNpc.EntityId);
@@ -400,6 +423,52 @@ public sealed partial class GameMap
     public IEnumerable<IEntity> GetAllEntities()
     {
         return _entities.Values;
+    }
+
+    public IEnumerable<MapItem> GetAllItems()
+    {
+        return _items.Values;
+    }
+
+    private async ValueTask DropItemAsync(ItemInfo info, int x, int y)
+    {
+        var instanceId = Interlocked.Increment(ref _nextItemInstanceId);
+        var mapItem = new MapItem(instanceId, info, x, y);
+
+        _items.TryAdd(instanceId, mapItem);
+
+        await SendToAllAsync("item_added", new ItemAdded
+        {
+            InstanceId = instanceId,
+            Texture = info.Texture,
+            SpriteIndex = info.SpriteIndex,
+            X = x,
+            Y = y
+        });
+    }
+
+    public async ValueTask PickupItemAsync(int playerEntityId)
+    {
+        if (!_entities.TryGetValue(playerEntityId, out var entity) || entity is not Player player)
+        {
+            return;
+        }
+
+        var item = _items.Values.FirstOrDefault(i => i.X == player.X && i.Y == player.Y);
+        if (item is null)
+        {
+            return;
+        }
+
+        if (!_items.TryRemove(item.InstanceId, out _))
+        {
+            return;
+        }
+
+        await SendToAllAsync("item_removed", new ItemRemoved
+        {
+            InstanceId = item.InstanceId
+        });
     }
 
     public async Task UpdateAsync()

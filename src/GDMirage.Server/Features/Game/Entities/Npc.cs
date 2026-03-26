@@ -14,6 +14,7 @@ public sealed class Npc(int entityId, NpcInfo info) : IEntity
     public int Stamina => info.Stamina;
     public int Intelligence => info.Intelligence;
     public double RespawnDelaySec => info.RespawnDelaySecs;
+    public Dictionary<string, double> Loot => info.Loot;
 
     public int MaxHealth { get; init; }
     public int Health { get; set; }

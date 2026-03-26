@@ -12,4 +12,7 @@ public sealed record InitializeMap
 
     [JsonPropertyName("entities")]
     public required List<EntityDto> Entities { get; init; }
+
+    [JsonPropertyName("items")]
+    public required List<ItemDto> Items { get; init; }
 }
