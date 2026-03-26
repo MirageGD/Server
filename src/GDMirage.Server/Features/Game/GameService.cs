@@ -41,14 +41,14 @@ public sealed partial class GameService(
 
         await connection.SendAsync("chat", new ChatMessage
         {
-            Channel = "system",
+            Channel = ChatChannel.System,
             Message = $"Welcome to GDMirage! There are {_players.Count} players online!",
             Color = "#ffff00"
         });
 
         var joinMessage = new ChatMessage
         {
-            Channel = "system",
+            Channel = ChatChannel.System,
             Message = $"{player.Name} has joined.",
             Color = "#ffff00"
         };
@@ -73,7 +73,7 @@ public sealed partial class GameService(
 
         var leaveMessage = new ChatMessage
         {
-            Channel = "system",
+            Channel = ChatChannel.System,
             Message = $"{player.Name} has left.",
             Color = "#ffff00"
         };

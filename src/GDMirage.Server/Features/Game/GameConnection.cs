@@ -214,7 +214,7 @@ public sealed partial class GameConnection(ILogger<GameConnection> logger, WebSo
         {
             var response = new ChatMessage
             {
-                Channel = "system",
+                Channel = ChatChannel.System,
                 Message = $"Unknown command: {text}",
                 Color = "#ff4444"
             };

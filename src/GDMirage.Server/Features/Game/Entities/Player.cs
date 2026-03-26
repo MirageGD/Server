@@ -99,7 +99,7 @@ public sealed class Player(int entityId, GameConnection connection, string accou
 
         await Connection.SendAsync("chat", new ChatMessage
         {
-            Channel = "system",
+            Channel = ChatChannel.System,
             Message = $"You have reached level {character.Level}!",
             Color = "#ffff00"
         });

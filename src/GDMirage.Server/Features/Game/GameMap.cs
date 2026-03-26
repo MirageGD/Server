@@ -223,7 +223,7 @@ public sealed partial class GameMap
             case Player attackerPlayer when target is Npc hitNpc:
                 await attackerPlayer.Connection.SendAsync("chat", new ChatMessage
                 {
-                    Channel = "combat",
+                    Channel = ChatChannel.Combat,
                     Message = $"You hit {hitNpc.Name} for {damage}!",
                     Color = "#ff8800"
                 });
@@ -232,7 +232,7 @@ public sealed partial class GameMap
             case Npc attackingNpc when target is Player hitPlayer:
                 await hitPlayer.Connection.SendAsync("chat", new ChatMessage
                 {
-                    Channel = "combat",
+                    Channel = ChatChannel.Combat,
                     Message = $"A {attackingNpc.Name} hits you for {damage}!",
                     Color = "#ff4444"
                 });
@@ -257,7 +257,7 @@ public sealed partial class GameMap
 
                 await killerPlayer.Connection.SendAsync("chat", new ChatMessage
                 {
-                    Channel = "combat",
+                    Channel = ChatChannel.Combat,
                     Message = $"You defeated a {killedNpc.Name} and received {experience} XP points!",
                     Color = "#ffff00"
                 });
@@ -293,7 +293,7 @@ public sealed partial class GameMap
 
                     await killedPlayer.Connection.SendAsync("chat", new ChatMessage
                     {
-                        Channel = "combat",
+                        Channel = ChatChannel.Combat,
                         Message = $"You have been killed by a {killerNpc.Name}!",
                         Color = "#ff0000"
                     });
@@ -304,7 +304,7 @@ public sealed partial class GameMap
 
                         await otherPlayer.Connection.SendAsync("chat", new ChatMessage
                         {
-                            Channel = "local",
+                            Channel = ChatChannel.Local,
                             Message = $"{killedPlayer.Name} has been killed by a {killerNpc.Name}.",
                             Color = "#ff8800"
                         });
@@ -333,7 +333,7 @@ public sealed partial class GameMap
 
         return SendToAllAsync("chat", new ChatMessage
         {
-            Channel = "local",
+            Channel = ChatChannel.Local,
             EntityId = sender.EntityId,
             SenderName = sender.Name,
             Message = message,
@@ -475,12 +475,12 @@ public sealed partial class GameMap
         {
             await player.Connection.SendAsync("chat", new ChatMessage
             {
-                Channel = "system",
+                Channel = ChatChannel.System,
                 Message = $"You picked up a {item.Info.Name}.",
                 Color = "#ffff00"
             });
         }
-        
+
         foreach (var slot in changedSlots)
         {
             await player.SendInventoryUpdateAsync(slot);
