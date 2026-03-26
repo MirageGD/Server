@@ -469,6 +469,22 @@ public sealed partial class GameMap
         {
             InstanceId = item.InstanceId
         });
+
+        var changedSlots = player.Inventory.TryAdd(item.Info);
+        if (changedSlots.Count > 0)
+        {
+            await player.Connection.SendAsync("chat", new ChatMessage
+            {
+                Channel = "system",
+                Message = $"You picked up a {item.Info.Name}.",
+                Color = "#ffff00"
+            });
+        }
+        
+        foreach (var slot in changedSlots)
+        {
+            await player.SendInventoryUpdateAsync(slot);
+        }
     }
 
     public async Task UpdateAsync()

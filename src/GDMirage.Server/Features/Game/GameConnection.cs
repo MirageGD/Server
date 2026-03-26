@@ -180,6 +180,26 @@ public sealed partial class GameConnection(ILogger<GameConnection> logger, WebSo
                     }
 
                     break;
+
+                case "item_move":
+                    if (Player is not null &&
+                        root.TryGetProperty("from_slot", out var slotFromProperty) &&
+                        root.TryGetProperty("to_slot", out var slotToProperty))
+                    {
+                        var slotFrom = slotFromProperty.GetInt32();
+                        var slotTo = slotToProperty.GetInt32();
+
+                        var quantity = root.TryGetProperty("quantity", out var qtyProp) ? qtyProp.GetInt32() : 0;
+
+                        var changed = Player.Inventory.Move(slotFrom, slotTo, quantity);
+
+                        foreach (var slot in changed)
+                        {
+                            await Player.SendInventoryUpdateAsync(slot);
+                        }
+                    }
+
+                    break;
             }
         }
         catch (JsonException ex)

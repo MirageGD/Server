@@ -18,4 +18,6 @@ public sealed record Character
     public Direction Direction { get; set; } = Direction.Down;
     public int X { get; set; } = 19;
     public int Y { get; set; } = 8;
+    public int InventorySize { get; set; } = 20;
+    public List<CharacterInventorySlot?> Inventory { get; set; } = [];
 }

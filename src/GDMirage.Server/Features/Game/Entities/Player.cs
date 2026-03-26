@@ -5,7 +5,7 @@ using GDMirage.Server.Features.Shared;
 
 namespace GDMirage.Server.Features.Game.Entities;
 
-public sealed class Player(int entityId, GameConnection connection, string accountName, Character character, GameMap currentMap) : IEntity
+public sealed class Player(int entityId, GameConnection connection, string accountName, Character character, GameMap currentMap, ItemInfoManager itemInfoManager) : IEntity
 {
     public int EntityId => entityId;
     public string AccountName => accountName;
@@ -59,6 +59,7 @@ public sealed class Player(int entityId, GameConnection connection, string accou
     public int Intelligence => character.Intelligence;
 
     public GameConnection Connection { get; } = connection;
+    public Inventory Inventory { get; } = new(character, itemInfoManager);
 
     public GameMap CurrentMap
     {
@@ -172,6 +173,26 @@ public sealed class Player(int entityId, GameConnection connection, string accou
             Stamina = character.Stamina,
             Intelligence = character.Intelligence,
             StatPoints = character.StatPoints
+        });
+    }
+
+    public ValueTask SendInventoryAsync()
+    {
+        var slots = Inventory.GetAllSlotDtos().ToDictionary(x => x.Index, x => x.Dto);
+
+        return Connection.SendAsync("player_inventory", new PlayerInventory
+        {
+            Size = Inventory.Size,
+            Slots = slots
+        });
+    }
+
+    public ValueTask SendInventoryUpdateAsync(int slot)
+    {
+        return Connection.SendAsync("player_inventory_update", new PlayerInventoryUpdate
+        {
+            Slot = slot,
+            SlotData = Inventory.GetSlotDto(slot)
         });
     }
 }

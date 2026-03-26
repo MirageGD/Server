@@ -12,6 +12,7 @@ public sealed partial class GameService(
     ILogger<GameService> logger,
     IGameMapManager gameMapManager,
     EntityIdGenerator entityIdGenerator,
+    ItemInfoManager itemInfoManager,
     IOptions<ServerOptions> serverOptions) : IGameService
 {
     private readonly ConcurrentDictionary<int, Player> _players = new();
@@ -21,7 +22,7 @@ public sealed partial class GameService(
         var map = gameMapManager.GetMap(character.Map);
 
         var playerId = entityIdGenerator.GetNext();
-        var player = new Player(playerId, connection, account.Name, character, map);
+        var player = new Player(playerId, connection, account.Name, character, map, itemInfoManager);
 
         if (!_players.TryAdd(playerId, player))
         {
@@ -34,6 +35,7 @@ public sealed partial class GameService(
         await map.AddEntityAsync(player);
         await player.SendXpAsync();
         await player.SendStatsAsync();
+        await player.SendInventoryAsync();
 
         LogPlayerJoined(player.Name, playerId, character.Map);
 
