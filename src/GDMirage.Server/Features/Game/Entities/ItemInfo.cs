@@ -1,9 +1,10 @@
+using JetBrains.Annotations;
+
 namespace GDMirage.Server.Features.Game.Entities;
 
-public sealed record ItemInfo
+[UsedImplicitly]
+public sealed record ItemInfo : Info
 {
-    public string Id { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
     public string? Description { get; init; }
     public string Texture { get; init; } = string.Empty;
     public int SpriteIndex { get; init; }

@@ -6,11 +6,11 @@ namespace GDMirage.Server.Features.Game.Entities;
 public sealed class Inventory
 {
     private readonly List<CharacterInventorySlot?> _slots;
-    private readonly ItemInfoManager _itemInfoManager;
+    private readonly InfoManager<ItemInfo> _itemInfoManager;
 
     public int Size => _slots.Count;
 
-    public Inventory(Character character, ItemInfoManager itemInfoManager)
+    public Inventory(Character character, InfoManager<ItemInfo> itemInfoManager)
     {
         _itemInfoManager = itemInfoManager;
         _slots = character.Inventory;
@@ -83,7 +83,7 @@ public sealed class Inventory
 
         quantity = quantity <= 0 || quantity >= slotFrom.Quantity ? slotFrom.Quantity : quantity;
 
-        var fromItemInfo = _itemInfoManager.GetItemInfo(slotFrom.ItemId);
+        var fromItemInfo = _itemInfoManager.Get(slotFrom.ItemId);
 
         var slotTo = _slots[to];
         if (slotTo is null)
@@ -149,7 +149,7 @@ public sealed class Inventory
             return null;
         }
 
-        var itemInfo = _itemInfoManager.GetItemInfo(slot.ItemId);
+        var itemInfo = _itemInfoManager.Get(slot.ItemId);
 
         return MakeDto(slot, itemInfo);
     }
@@ -164,7 +164,7 @@ public sealed class Inventory
                 continue;
             }
 
-            var itemInfo = _itemInfoManager.GetItemInfo(slot.ItemId);
+            var itemInfo = _itemInfoManager.Get(slot.ItemId);
 
             yield return (i, MakeDto(slot, itemInfo));
         }

@@ -12,8 +12,9 @@ public sealed partial class GameService(
     ILogger<GameService> logger,
     IGameMapManager gameMapManager,
     EntityIdGenerator entityIdGenerator,
-    ItemInfoManager itemInfoManager,
-    IOptions<ServerOptions> serverOptions) : IGameService
+    InfoManager<ItemInfo> itemInfoManager,
+    IOptions<ServerOptions> serverOptions)
+    : IGameService
 {
     private readonly ConcurrentDictionary<int, Player> _players = new();
 
@@ -123,24 +124,6 @@ public sealed partial class GameService(
         });
     }
 
-    public Player? GetPlayer(int entityId)
-    {
-        return _players.TryGetValue(entityId, out var player) ? player : null;
-    }
-
-    public IEnumerable<Player> GetAllPlayers()
-    {
-        return _players.Values;
-    }
-
-    public async ValueTask SendToAllAsync<T>(string type, T payload)
-    {
-        foreach (var player in _players.Values)
-        {
-            await player.Connection.SendAsync(type, payload);
-        }
-    }
-
     public async ValueTask GrantExperience(int entityId, int amount)
     {
         if (_players.TryGetValue(entityId, out var player))
@@ -180,7 +163,7 @@ public sealed partial class GameService(
             targetDirection = dir;
         }
 
-        if (warp.TargetMap == player.CurrentMap.MapPath)
+        if (warp.TargetMap == player.CurrentMap.Id)
         {
             player.X = warp.TargetX;
             player.Y = warp.TargetY;

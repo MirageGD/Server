@@ -5,7 +5,7 @@ using GDMirage.Server.Features.Shared;
 
 namespace GDMirage.Server.Features.Game.Entities;
 
-public sealed class Player(int entityId, GameConnection connection, string accountName, Character character, GameMap currentMap, ItemInfoManager itemInfoManager) : IEntity
+public sealed class Player(int entityId, GameConnection connection, string accountName, Character character, GameMap currentMap, InfoManager<ItemInfo> itemInfoManager) : IEntity
 {
     public int EntityId => entityId;
     public string AccountName => accountName;
@@ -68,7 +68,7 @@ public sealed class Player(int entityId, GameConnection connection, string accou
         {
             field = value;
 
-            character.Map = value.MapPath;
+            character.Map = value.Id;
         }
     } = currentMap;
 

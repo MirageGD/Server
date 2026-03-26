@@ -23,25 +23,31 @@ public sealed partial class GameMap
     private readonly Map _map;
     private readonly Func<int> _entityIdGenerator;
     private readonly IReadOnlyList<NpcInfo> _npcInfos;
-    private readonly ItemInfoManager _itemInfoManager;
+    private readonly InfoManager<ItemInfo> _itemInfoManager;
     private readonly Random _random = new();
     private int _nextItemInstanceId;
     private DateTime _lastRegenTime = DateTime.UtcNow;
 
-    public string MapPath { get; }
+    public string Id { get; }
 
-    public GameMap(ILogger logger, IGameService gameService, string mapPath, string fullPath, Func<int> entityIdGenerator, IReadOnlyList<NpcInfo> npcInfos, ItemInfoManager itemInfoManager)
+    public GameMap(
+        ILogger logger,
+        IGameService gameService,
+        string id, string path,
+        Func<int> entityIdGenerator,
+        IReadOnlyList<NpcInfo> npcInfos,
+        InfoManager<ItemInfo> itemInfoManager)
     {
         _logger = logger;
         _gameService = gameService;
-        _map = new Map(fullPath);
+        _map = new Map(path);
         _entityIdGenerator = entityIdGenerator;
         _npcInfos = npcInfos;
         _itemInfoManager = itemInfoManager;
 
-        MapPath = mapPath;
+        Id = id;
 
-        LogMapLoaded(mapPath);
+        LogMapLoaded(id);
 
         SpawnNpcs();
     }
@@ -66,7 +72,7 @@ public sealed partial class GameMap
 
             _entities.TryAdd(npc.EntityId, npc);
 
-            LogEntityAdded(npc.Name, npc.EntityId, MapPath);
+            LogEntityAdded(npc.Name, npc.EntityId, Id);
         }
     }
 
@@ -116,7 +122,7 @@ public sealed partial class GameMap
             return ValueTask.CompletedTask;
         }
 
-        LogEntityAdded(entity.Name, entity.EntityId, MapPath);
+        LogEntityAdded(entity.Name, entity.EntityId, Id);
 
         return BroadcastEntityJoined(entity);
     }
@@ -128,7 +134,7 @@ public sealed partial class GameMap
             return ValueTask.CompletedTask;
         }
 
-        LogEntityRemoved(entity.Name, entityId, MapPath);
+        LogEntityRemoved(entity.Name, entityId, Id);
 
         return BroadcastEntityLeft(entity);
     }
@@ -271,7 +277,7 @@ public sealed partial class GameMap
 
                     try
                     {
-                        var itemInfo = _itemInfoManager.GetItemInfo(itemId);
+                        var itemInfo = _itemInfoManager.Get(itemId);
 
                         await DropItemAsync(itemInfo, killedNpc.X, killedNpc.Y);
                     }
@@ -300,7 +306,10 @@ public sealed partial class GameMap
 
                     foreach (var entity in _entities.Values)
                     {
-                        if (entity is not Player otherPlayer || otherPlayer.EntityId == killedPlayer.EntityId) continue;
+                        if (entity is not Player otherPlayer || otherPlayer.EntityId == killedPlayer.EntityId)
+                        {
+                            continue;
+                        }
 
                         await otherPlayer.Connection.SendAsync("chat", new ChatMessage
                         {
@@ -641,7 +650,10 @@ public sealed partial class GameMap
 
     private Direction? FindPathNextStep(int fromX, int fromY, int toX, int toY)
     {
-        if (fromX == toX && fromY == toY) return null;
+        if (fromX == toX && fromY == toY)
+        {
+            return null;
+        }
 
         var start = (fromX, fromY);
         var goal = (toX, toY);

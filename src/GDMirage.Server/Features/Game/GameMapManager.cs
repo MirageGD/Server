@@ -11,8 +11,8 @@ public sealed partial class GameMapManager(
     ILogger<GameMapManager> logger,
     IOptions<ServerOptions> options,
     EntityIdGenerator entityIdGenerator,
-    NpcInfoManager npcInfoManager,
-    ItemInfoManager itemInfoManager,
+    InfoManager<NpcInfo> npcInfoManager,
+    InfoManager<ItemInfo> itemInfoManager,
     IServiceProvider serviceProvider)
     : BackgroundService, IGameMapManager
 {
@@ -26,9 +26,9 @@ public sealed partial class GameMapManager(
 
     private GameMap LoadMap(string mapPath)
     {
-        var fullPath = Path.Combine(_contentPath, mapPath);
+        var path = Path.Combine(_contentPath, mapPath);
 
-        if (!File.Exists(fullPath))
+        if (!File.Exists(path))
         {
             throw new FileNotFoundException($"Map file not found: {mapPath}", mapPath);
         }
@@ -38,24 +38,28 @@ public sealed partial class GameMapManager(
         var gameService = serviceProvider.GetRequiredService<IGameService>();
         var npcInfos = LoadNpcInfos(mapPath);
 
-        return new GameMap(logger, gameService, mapPath, fullPath, entityIdGenerator.GetNext, npcInfos, itemInfoManager);
+        return new GameMap(logger, gameService, mapPath, path, entityIdGenerator.GetNext, npcInfos, itemInfoManager);
     }
 
     private List<NpcInfo> LoadNpcInfos(string mapPath)
     {
-        var infoPath = Path.Combine(_contentPath, Path.ChangeExtension(mapPath, ".json"));
+        var path = Path.Combine(_contentPath, Path.ChangeExtension(mapPath, ".json"));
 
-        if (!File.Exists(infoPath))
+        if (!File.Exists(path))
         {
             return [];
         }
 
-        var json = File.ReadAllText(infoPath);
-        var info = JsonSerializer.Deserialize<MapInfo>(json);
+        var mapInfoJson = File.ReadAllText(path);
+        var mapInfo = JsonSerializer.Deserialize<MapInfo>(mapInfoJson);
 
-        return info?.Npcs is not (null or { Count: 0 })
-            ? info.Npcs.Select(npcInfoManager.GetNpcInfo).ToList()
-            : [];
+        var npcs = mapInfo?.Npcs;
+        if (npcs is null)
+        {
+            return [];
+        }
+
+        return npcs.Select(npcInfoManager.Get).ToList();
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

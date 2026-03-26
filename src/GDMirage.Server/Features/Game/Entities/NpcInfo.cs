@@ -1,8 +1,10 @@
+using JetBrains.Annotations;
+
 namespace GDMirage.Server.Features.Game.Entities;
 
-public sealed record NpcInfo
+[UsedImplicitly]
+public sealed record NpcInfo : Info
 {
-    public string Name { get; init; } = string.Empty;
     public string Sprite { get; init; } = string.Empty;
     public int Level { get; init; } = 1;
     public int Strength { get; init; } = 10;
